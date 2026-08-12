@@ -37,3 +37,16 @@ CREATE TABLE IF NOT EXISTS matriculas (
 CREATE UNIQUE INDEX IF NOT EXISTS matriculas_aluno_aula_confirmada_idx
   ON matriculas (aluno_id, aula_id)
   WHERE status = 'confirmada';
+
+
+  CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id SERIAL PRIMARY KEY,
+  aluno_id INTEGER NOT NULL REFERENCES alunos(id) ON DELETE CASCADE,
+  token_hash CHAR(64) NOT NULL UNIQUE,
+  expira_em TIMESTAMP NOT NULL,
+  revogado_em TIMESTAMP,
+  criado_em TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS refresh_tokens_aluno_id_idx
+  ON refresh_tokens (aluno_id);
