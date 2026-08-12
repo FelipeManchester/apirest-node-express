@@ -1,6 +1,7 @@
 const express = require('express');
+const autenticar = require('../middlewares/autenticar');
+
 const aulasRepository = require('../repositories/aulasRepository');
-const alunosRepository = require('../repositories/alunosRepository');
 const matriculasRepository = require('../repositories/matriculasRepository');
 const instrutorRepository = require('../repositories/instrutoresRepository');
 
@@ -127,24 +128,11 @@ router.delete('/:id', async (req, res) => {
   res.status(204).send();
 });
 
-router.post('/:id/matriculas', async (req, res, next) => {
+router.post('/:id/matriculas', autenticar, async (req, res, next) => {
   const aula = await aulasRepository.buscarPorId(req.params.id);
 
   if (!aula) {
     return res.status(404).json({ erro: 'Aula não encontrada' });
-  }
-
-  const { aluno_id } = req.body;
-
-  if (!aluno_id) {
-    return res.status(400).json({ erro: 'aluno_id é obrigatório' });
-  }
-
-  const aluno = await alunosRepository.buscarPorId(aluno_id);
-  if (!aluno) {
-    return res
-      .status(422)
-      .json({ erro: 'aluno_id não corresponde a nenhum aluno existente' });
   }
 
   const totalConfirmadas = await matriculasRepository.contarConfirmadas(
@@ -157,7 +145,7 @@ router.post('/:id/matriculas', async (req, res, next) => {
 
   try {
     const matriculaCriada = await matriculasRepository.criar({
-      aluno_id,
+      aluno_id: req.alunoId,
       aula_id: aula.id,
     });
 
@@ -173,7 +161,7 @@ router.post('/:id/matriculas', async (req, res, next) => {
   }
 });
 
-router.patch('/:id/matriculas/:matriculaId', async (req, res) => {
+router.patch('/:id/matriculas/:matriculaId', autenticar, async (req, res) => {
   const { status } = req.body;
 
   if (status !== 'cancelada') {
@@ -187,6 +175,12 @@ router.patch('/:id/matriculas/:matriculaId', async (req, res) => {
 
   if (!matricula) {
     return res.status(404).json({ erro: 'Matrícula não encontrada' });
+  }
+
+  if (matricula.aluno_id !== req.alunoId) {
+    return res.status(403).json({
+      erro: 'Você não pode cancelar a matrícula de outro aluno',
+    });
   }
 
   const matriculaCancelada = await matriculasRepository.cancelar(matricula.id);

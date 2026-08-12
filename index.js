@@ -5,6 +5,7 @@ const express = require('express');
 const alunosRouter = require('./routes/alunos');
 const instrutoresRouter = require('./routes/instrutores');
 const aulasRouter = require('./routes/aulas');
+const authRouter = require('./routes/auth');
 
 const app = express();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use('/alunos', alunosRouter);
 app.use('/instrutores', instrutoresRouter);
 app.use('/aulas', aulasRouter);
+app.use('/auth', authRouter);
 
 app.use((err, req, res, _next) => {
   console.error(err);
