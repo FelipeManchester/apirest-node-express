@@ -41,7 +41,9 @@ CREATE UNIQUE INDEX IF NOT EXISTS matriculas_aluno_aula_confirmada_idx
 
   CREATE TABLE IF NOT EXISTS refresh_tokens (
   id SERIAL PRIMARY KEY,
-  aluno_id INTEGER NOT NULL REFERENCES alunos(id) ON DELETE CASCADE,
+  aluno_id INTEGER REFERENCES alunos(id) ON DELETE CASCADE,
+  instrutor_id INTEGER REFERENCES instrutores(id) ON DELETE CASCADE,
+  CHECK ((aluno_id IS NOT NULL)::int + (instrutor_id IS NOT NULL)::int = 1),
   token_hash CHAR(64) NOT NULL UNIQUE,
   expira_em TIMESTAMP NOT NULL,
   revogado_em TIMESTAMP,

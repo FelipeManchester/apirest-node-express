@@ -16,4 +16,22 @@ function calcularExpiracao() {
   return agora;
 }
 
-module.exports = { gerarRefreshToken, hashRefreshToken, calcularExpiracao };
+const COOKIE_REFRESH = 'refresh_token';
+
+function opcoesCookieRefresh() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/auth',
+    maxAge: DIAS_DE_VALIDADE * 24 * 60 * 60 * 1000,
+  };
+}
+
+module.exports = {
+  gerarRefreshToken,
+  hashRefreshToken,
+  calcularExpiracao,
+  opcoesCookieRefresh,
+  COOKIE_REFRESH,
+};

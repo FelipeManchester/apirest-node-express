@@ -5,10 +5,11 @@ const { hashSenha } = require('../services/senhaService');
 const alunosRepository = require('../repositories/alunosRepository');
 const matriculasRepository = require('../repositories/matriculasRepository');
 const autenticar = require('../middlewares/autenticar');
+const autorizar = require('../middlewares/autorizar');
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
+router.get('/', autenticar, autorizar('admin'), async (req, res) => {
   const alunos = await alunosRepository.listar();
 
   res.json(alunos);
@@ -36,7 +37,10 @@ router.post('/', async (req, res) => {
 });
 
 router.get('/:id/matriculas', autenticar, async (req, res) => {
-  if (Number(req.params.id) !== req.alunoId) {
+  if (
+    req.usuario.papel !== 'aluno' ||
+    Number(req.params.id) !== req.usuario.id
+  ) {
     return res.status(403).json({
       erro: 'Você não pode ver as matrículas de outro aluno',
     });

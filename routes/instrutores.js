@@ -1,5 +1,8 @@
 const express = require('express');
 const instrutoresRepository = require('../repositories/instrutoresRepository');
+const autenticar = require('../middlewares/autenticar');
+const autorizar = require('../middlewares/autorizar');
+const { hashSenha } = require('../services/senhaService');
 
 const router = express.Router();
 
@@ -21,8 +24,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // CRIAR UM INSTRUTOR
-router.post('/', async (req, res) => {
-  const { nome, especialidade } = req.body;
+router.post('/', autenticar, autorizar('admin'), async (req, res) => {
+  const { nome, especialidade, email, senha, papel } = req.body;
 
   if (!nome || !especialidade) {
     return res
@@ -30,9 +33,14 @@ router.post('/', async (req, res) => {
       .json({ erro: 'nome e especialidade são orbigatórios' });
   }
 
+  const senha_hash = senha ? await hashSenha(senha) : null;
+
   const instrutorCriado = await instrutoresRepository.criar({
     nome,
     especialidade,
+    email,
+    senha_hash,
+    papel,
   });
 
   res
@@ -43,7 +51,7 @@ router.post('/', async (req, res) => {
 
 // EDITAR UM INSTRUTOR
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', autenticar, autorizar('admin'), async (req, res) => {
   const { nome, especialidade } = req.body;
 
   const instrutorAtualizado = await instrutoresRepository.atualizar(
@@ -63,25 +71,30 @@ router.patch('/:id', async (req, res) => {
 
 // DELETAR INSTRUTOR
 
-router.delete('/:id', async (req, res, next) => {
-  try {
-    const instrutorRemovido = await instrutoresRepository.remover(
-      req.params.id,
-    );
+router.delete(
+  '/:id',
+  autenticar,
+  autorizar('admin'),
+  async (req, res, next) => {
+    try {
+      const instrutorRemovido = await instrutoresRepository.remover(
+        req.params.id,
+      );
 
-    if (!instrutorRemovido) {
-      return res.status(404).json({ erro: 'Instrutor não encontrado' });
-    }
+      if (!instrutorRemovido) {
+        return res.status(404).json({ erro: 'Instrutor não encontrado' });
+      }
 
-    res.status(204).send();
-  } catch (err) {
-    if (err.code === '23503') {
-      return res.status(409).json({
-        erro: 'Não é possível remover: Existem aulas cadastradas com este instrutor',
-      });
+      res.status(204).send();
+    } catch (err) {
+      if (err.code === '23503') {
+        return res.status(409).json({
+          erro: 'Não é possível remover: Existem aulas cadastradas com este instrutor',
+        });
+      }
+      next(err);
     }
-    next(err);
-  }
-});
+  },
+);
 
 module.exports = router;

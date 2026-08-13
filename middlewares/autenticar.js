@@ -15,7 +15,8 @@ function autenticar(req, res, next) {
 
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
-    req.alunoId = payload.aluno_id;
+
+    req.usuario = { id: payload.usuario_id, papel: payload.papel };
     next();
   } catch {
     return res.status(401).json({ erro: 'Token inválido ou expirado' });

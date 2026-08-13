@@ -1,13 +1,18 @@
 const pool = require('../db/pool');
 
-async function criar({ aluno_id, token_hash, expira_em }) {
+async function criar({ aluno_id, instrutor_id, token_hash, expira_em }) {
   const query = /*sql*/ `
-  INSERT INTO refresh_tokens (aluno_id, token_hash, expira_em)
-  VALUES ($1, $2, $3)
+  INSERT INTO refresh_tokens (aluno_id, instrutor_id, token_hash, expira_em)
+  VALUES ($1, $2, $3, $4)
   RETURNING *
   `;
 
-  const resultado = await pool.query(query, [aluno_id, token_hash, expira_em]);
+  const resultado = await pool.query(query, [
+    aluno_id ?? null,
+    instrutor_id ?? null,
+    token_hash,
+    expira_em,
+  ]);
   return resultado.rows[0];
 }
 
@@ -30,14 +35,16 @@ async function revogar(id) {
   return resultado.rows[0];
 }
 
-async function revogarTodosDoAluno(aluno_id) {
+async function revogarTodosDoDono({ aluno_id, instrutor_id }) {
   const query = /*sql*/ `
-  UPDATE refresh_tokens
-  SET revogado_em = NOW()
-  WHERE aluno_id = $1 AND revogado_em IS NULL
+    UPDATE refresh_tokens
+    SET revogado_em = NOW()
+    WHERE aluno_id IS NOT DISTINCT FROM $1
+      AND instrutor_id IS NOT DISTINCT FROM $2
+      AND revogado_em IS NULL
   `;
 
-  await pool.query(query, [aluno_id]);
+  await pool.query(query, [aluno_id ?? null, instrutor_id ?? null]);
 }
 
-module.exports = { criar, buscarPorHash, revogar, revogarTodosDoAluno };
+module.exports = { criar, buscarPorHash, revogar, revogarTodosDoDono };
