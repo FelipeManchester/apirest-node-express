@@ -5,7 +5,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "migrate": "node-pg-migrate",
+    "migrate:up": "node-pg-migrate up",
+    "migrate:down": "node-pg-migrate down",
+    "limpar-tokens": "node scripts/limpar-tokens.js"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +32,9 @@
     "eslint": "^10.8.1",
     "eslit": "^6.0.0",
     "globals": "^17.9.0",
-    "nodemon": "^3.1.14"
+    "jest": "^30.4.2",
+    "node-pg-migrate": "^9.0.0",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
   }
 }

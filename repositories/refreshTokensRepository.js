@@ -47,4 +47,20 @@ async function revogarTodosDoDono({ aluno_id, instrutor_id }) {
   await pool.query(query, [aluno_id ?? null, instrutor_id ?? null]);
 }
 
-module.exports = { criar, buscarPorHash, revogar, revogarTodosDoDono };
+async function removerExpirados(diasDeRetencao = 30) {
+  const query = /* sql */ `
+    DELETE FROM refresh_tokens
+    WHERE expira_em < NOW() - ($1 || ' days')::interval
+  `;
+
+  const resultado = await pool.query(query, [diasDeRetencao]);
+  return resultado.rowCount;
+}
+
+module.exports = {
+  criar,
+  buscarPorHash,
+  revogar,
+  revogarTodosDoDono,
+  removerExpirados,
+};

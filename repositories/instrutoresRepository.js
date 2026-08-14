@@ -1,8 +1,12 @@
 const pool = require('../db/pool');
 
 async function listar() {
-  const query =
-    'SELECT id, nome, especialidade,papel FROM instrutores ORDER BY id';
+  const query = /* sql */ `
+    SELECT id, nome, especialidade, papel
+    FROM instrutores
+    WHERE ativo = true
+    ORDER BY id
+  `;
   const resultado = await pool.query(query);
 
   return resultado.rows;
@@ -32,29 +36,40 @@ async function criar({ nome, especialidade, email, senha_hash, papel }) {
   return resultado.rows[0];
 }
 
-async function atualizar(id, { nome, especialidade }) {
-  const query = `
+async function atualizar(id, { nome, especialidade, ativo }) {
+  const query = /* sql */ `
     UPDATE instrutores
     SET nome = COALESCE($1, nome),
-        especialidade = COALESCE($2, especialidade)
-    WHERE id = $3
-    RETURNING *
+        especialidade = COALESCE($2, especialidade),
+        ativo = COALESCE($3, ativo)
+    WHERE id = $4
+    RETURNING id, nome, especialidade, email, papel, ativo
   `;
 
-  const resultado = await pool.query(query, [nome, especialidade, id]);
+  const resultado = await pool.query(query, [
+    nome,
+    especialidade,
+    ativo ?? null,
+    id,
+  ]);
 
   return resultado.rows[0];
 }
 
 async function remover(id) {
-  const query = 'DELETE FROM instrutores WHERE id = $1 RETURNING *';
+  const query = /* sql */ `
+    UPDATE instrutores
+    SET ativo = false
+    WHERE id = $1
+    RETURNING id, nome, especialidade, email, papel, ativo
+  `;
   const resultado = await pool.query(query, [id]);
 
   return resultado.rows[0];
 }
 
 async function buscarPorEmail(email) {
-  const query = 'SELECT * FROM instrutores WHERE email = $1';
+  const query = 'SELECT * FROM instrutores WHERE email = $1 AND ativo = true';
   const resultado = await pool.query(query, [email]);
 
   return resultado.rows[0];

@@ -71,13 +71,14 @@ router.patch(
   autorizar('admin'),
   validar({ params: idParamSchema, body: atualizarInstrutorSchema }),
   async (req, res) => {
-    const { nome, especialidade } = req.body;
+    const { nome, especialidade, ativo } = req.body;
 
     const instrutorAtualizado = await instrutoresRepository.atualizar(
       req.params.id,
       {
         nome: nome ?? null,
         especialidade: especialidade ?? null,
+        ativo: ativo ?? null,
       },
     );
 
@@ -96,25 +97,16 @@ router.delete(
   autenticar,
   autorizar('admin'),
   validar({ params: idParamSchema }),
-  async (req, res, next) => {
-    try {
-      const instrutorRemovido = await instrutoresRepository.remover(
-        req.params.id,
-      );
+  async (req, res) => {
+    const instrutorRemovido = await instrutoresRepository.remover(
+      req.params.id,
+    );
 
-      if (!instrutorRemovido) {
-        return res.status(404).json({ erro: 'Instrutor não encontrado' });
-      }
-
-      res.status(204).send();
-    } catch (err) {
-      if (err.code === '23503') {
-        return res.status(409).json({
-          erro: 'Não é possível remover: Existem aulas cadastradas com este instrutor',
-        });
-      }
-      next(err);
+    if (!instrutorRemovido) {
+      return res.status(404).json({ erro: 'Instrutor não encontrado' });
     }
+
+    res.status(204).send();
   },
 );
 

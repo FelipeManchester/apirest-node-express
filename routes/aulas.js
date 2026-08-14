@@ -67,7 +67,7 @@ router.post(
     }
 
     const instrutorExiste = await instrutorRepository.buscarPorId(instrutor_id);
-    if (!instrutorExiste) {
+    if (!instrutorExiste || !instrutorExiste.ativo) {
       return res.status(422).json({
         erro: 'instrutor_id não corresponde a nenhum instrutor existente',
       });
