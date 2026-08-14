@@ -13,6 +13,7 @@ const limitadorLogin = rateLimit({
   limit: 10,
   standardHeaders: 'draft-7',
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === 'test',
   skipSuccessfulRequests: true,
   message: {
     erro: 'Muitas tentativas de login. Tente novamente em alguns minutos.',

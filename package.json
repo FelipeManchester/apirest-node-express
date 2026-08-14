@@ -9,7 +9,8 @@
     "migrate": "node-pg-migrate",
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
-    "limpar-tokens": "node scripts/limpar-tokens.js"
+    "limpar-tokens": "node scripts/limpar-tokens.js",
+    "test": "jest --runInBand"
   },
   "keywords": [],
   "author": "",
