@@ -23,6 +23,16 @@ async function buscarPorId(id) {
   return resultado.rows[0];
 }
 
+// Igual a buscarPorId, mas trava a linha até o fim da transação.
+// Só faz sentido dentro de executarEmTransacao — por isso o executor
+// é obrigatório aqui, sem valor padrão.
+async function buscarPorIdBloqueando(id, executor) {
+  const query = 'SELECT * FROM aulas WHERE id = $1 FOR UPDATE';
+
+  const resultado = await executor.query(query, [id]);
+  return resultado.rows[0];
+}
+
 // VERIFICA CONFLITO DE AGENDAS
 
 async function existeConflito({
@@ -127,6 +137,7 @@ async function remover(id) {
 module.exports = {
   listar,
   buscarPorId,
+  buscarPorIdBloqueando,
   existeConflito,
   criar,
   atualizar,

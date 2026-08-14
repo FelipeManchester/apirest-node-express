@@ -1,7 +1,7 @@
 const pool = require('../db/pool');
 
-async function contarConfirmadas(aula_id) {
-  const resultado = await pool.query(
+async function contarConfirmadas(aula_id, executor = pool) {
+  const resultado = await executor.query(
     /* sql */ `SELECT COUNT(*)::int AS total
                FROM matriculas
                WHERE aula_id = $1 AND status = 'confirmada'`,
@@ -10,8 +10,8 @@ async function contarConfirmadas(aula_id) {
   return resultado.rows[0].total;
 }
 
-async function criar({ aluno_id, aula_id }) {
-  const resultado = await pool.query(
+async function criar({ aluno_id, aula_id }, executor = pool) {
+  const resultado = await executor.query(
     /* sql */ `INSERT INTO matriculas (aluno_id, aula_id)
                VALUES ($1, $2)
                RETURNING *`,

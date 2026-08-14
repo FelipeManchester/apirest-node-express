@@ -4,6 +4,14 @@ const autenticar = require('../middlewares/autenticar');
 const autorizar = require('../middlewares/autorizar');
 const { hashSenha } = require('../services/senhaService');
 
+const validar = require('../middlewares/validar');
+
+const {
+  criarInstrutorSchema,
+  atualizarInstrutorSchema,
+  idParamSchema,
+} = require('../schemas');
+
 const router = express.Router();
 
 // LISTA TODOS OS INSTRUTORES
@@ -13,7 +21,7 @@ router.get('/', async (req, res) => {
 });
 
 // LISTA UM INSTRUTOR POR ID
-router.get('/:id', async (req, res) => {
+router.get('/:id', validar({ params: idParamSchema }), async (req, res) => {
   const instrutor = await instrutoresRepository.buscarPorId(req.params.id);
 
   if (!instrutor) {
@@ -24,50 +32,62 @@ router.get('/:id', async (req, res) => {
 });
 
 // CRIAR UM INSTRUTOR
-router.post('/', autenticar, autorizar('admin'), async (req, res) => {
-  const { nome, especialidade, email, senha, papel } = req.body;
+router.post(
+  '/',
+  autenticar,
+  autorizar('admin'),
+  validar({ body: criarInstrutorSchema }),
+  async (req, res) => {
+    const { nome, especialidade, email, senha, papel } = req.body;
 
-  if (!nome || !especialidade) {
-    return res
-      .status(400)
-      .json({ erro: 'nome e especialidade são orbigatórios' });
-  }
+    if (!nome || !especialidade) {
+      return res
+        .status(400)
+        .json({ erro: 'nome e especialidade são orbigatórios' });
+    }
 
-  const senha_hash = senha ? await hashSenha(senha) : null;
+    const senha_hash = senha ? await hashSenha(senha) : null;
 
-  const instrutorCriado = await instrutoresRepository.criar({
-    nome,
-    especialidade,
-    email,
-    senha_hash,
-    papel,
-  });
+    const instrutorCriado = await instrutoresRepository.criar({
+      nome,
+      especialidade,
+      email,
+      senha_hash,
+      papel,
+    });
 
-  res
-    .status(201)
-    .location(`/instrutores/${instrutorCriado.id}`)
-    .json(instrutorCriado);
-});
+    res
+      .status(201)
+      .location(`/instrutores/${instrutorCriado.id}`)
+      .json(instrutorCriado);
+  },
+);
 
 // EDITAR UM INSTRUTOR
 
-router.patch('/:id', autenticar, autorizar('admin'), async (req, res) => {
-  const { nome, especialidade } = req.body;
+router.patch(
+  '/:id',
+  autenticar,
+  autorizar('admin'),
+  validar({ params: idParamSchema, body: atualizarInstrutorSchema }),
+  async (req, res) => {
+    const { nome, especialidade } = req.body;
 
-  const instrutorAtualizado = await instrutoresRepository.atualizar(
-    req.params.id,
-    {
-      nome: nome ?? null,
-      especialidade: especialidade ?? null,
-    },
-  );
+    const instrutorAtualizado = await instrutoresRepository.atualizar(
+      req.params.id,
+      {
+        nome: nome ?? null,
+        especialidade: especialidade ?? null,
+      },
+    );
 
-  if (!instrutorAtualizado) {
-    return res.status(404).json({ erro: 'Instrutor não encontrado' });
-  }
+    if (!instrutorAtualizado) {
+      return res.status(404).json({ erro: 'Instrutor não encontrado' });
+    }
 
-  res.json(instrutorAtualizado);
-});
+    res.json(instrutorAtualizado);
+  },
+);
 
 // DELETAR INSTRUTOR
 
@@ -75,6 +95,7 @@ router.delete(
   '/:id',
   autenticar,
   autorizar('admin'),
+  validar({ params: idParamSchema }),
   async (req, res, next) => {
     try {
       const instrutorRemovido = await instrutoresRepository.remover(

@@ -134,7 +134,18 @@ router.post('/refresh', async (req, res) => {
     return res.status(401).json({ erro: 'Refresh token inválido' });
   }
 
-  await refreshTokensRepository.revogar(registro.id);
+  const revogado = await refreshTokensRepository.revogar(registro.id);
+
+  if (!revogado) {
+    // Outra requisição revogou este mesmo token entre a busca e agora:
+    // ou é corrida de cliente, ou é reuso de token vazado (parte 8).
+    await refreshTokensRepository.revogarTodosDoDono({
+      aluno_id: registro.aluno_id,
+      instrutor_id: registro.instrutor_id,
+    });
+
+    return res.status(401).json({ erro: 'Refresh token inválido' });
+  }
 
   const tokens = await emitirTokens(dono);
   responderComTokens(res, tokens);

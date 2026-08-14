@@ -8,6 +8,7 @@ const aulasRouter = require('./routes/aulas');
 const authRouter = require('./routes/auth');
 
 const cookieParser = require('cookie-parser');
+const ErroDeDominio = require('./errors/ErroDeDominio');
 const helmet = require('helmet');
 const corsConfigurado = require('./middlewares/cors');
 const {
@@ -30,6 +31,10 @@ app.use('/aulas', aulasRouter);
 app.use('/auth', limitadorLogin, authRouter);
 
 app.use((err, req, res, _next) => {
+  if (err instanceof ErroDeDominio) {
+    return res.status(err.status).json({ erro: err.message });
+  }
+
   if (err.type === 'entity.too.large') {
     return res.status(413).json({ erro: 'Corpo da requisição grande demais' });
   }

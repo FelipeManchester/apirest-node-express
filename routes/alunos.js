@@ -7,6 +7,9 @@ const matriculasRepository = require('../repositories/matriculasRepository');
 const autenticar = require('../middlewares/autenticar');
 const autorizar = require('../middlewares/autorizar');
 
+const validar = require('../middlewares/validar');
+const { criarAlunoSchema, idParamSchema } = require('../schemas');
+
 const router = express.Router();
 
 router.get('/', autenticar, autorizar('admin'), async (req, res) => {
@@ -15,14 +18,8 @@ router.get('/', autenticar, autorizar('admin'), async (req, res) => {
   res.json(alunos);
 });
 
-router.post('/', async (req, res) => {
+router.post('/', validar({ body: criarAlunoSchema }), async (req, res) => {
   const { nome, email, data_nascimento, senha } = req.body;
-
-  if (!nome || !email || !data_nascimento || !senha) {
-    return res.status(400).json({
-      erro: 'nome, email, data_nascimento e senha são obrigatórios',
-    });
-  }
 
   const senha_hash = await hashSenha(senha);
 
@@ -36,24 +33,29 @@ router.post('/', async (req, res) => {
   res.status(201).location(`/alunos/${alunoCriado.id}`).json(alunoSemSenha);
 });
 
-router.get('/:id/matriculas', autenticar, async (req, res) => {
-  if (
-    req.usuario.papel !== 'aluno' ||
-    Number(req.params.id) !== req.usuario.id
-  ) {
-    return res.status(403).json({
-      erro: 'Você não pode ver as matrículas de outro aluno',
-    });
-  }
+router.get(
+  '/:id/matriculas',
+  autenticar,
+  validar({ params: idParamSchema }),
+  async (req, res) => {
+    if (
+      req.usuario.papel !== 'aluno' ||
+      Number(req.params.id) !== req.usuario.id
+    ) {
+      return res.status(403).json({
+        erro: 'Você não pode ver as matrículas de outro aluno',
+      });
+    }
 
-  const aluno = await alunosRepository.buscarPorId(req.params.id);
+    const aluno = await alunosRepository.buscarPorId(req.params.id);
 
-  if (!aluno) {
-    return res.status(404).json({ erro: 'Aluno não encontrado' });
-  }
+    if (!aluno) {
+      return res.status(404).json({ erro: 'Aluno não encontrado' });
+    }
 
-  const matriculas = await matriculasRepository.listarPorAluno(req.params.id);
-  res.json(matriculas);
-});
+    const matriculas = await matriculasRepository.listarPorAluno(req.params.id);
+    res.json(matriculas);
+  },
+);
 
 module.exports = router;

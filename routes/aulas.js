@@ -6,17 +6,33 @@ const aulasRepository = require('../repositories/aulasRepository');
 const matriculasRepository = require('../repositories/matriculasRepository');
 const instrutorRepository = require('../repositories/instrutoresRepository');
 
+const validar = require('../middlewares/validar');
+const {
+  criarAulaSchema,
+  atualizarAulaSchema,
+  idParamSchema,
+  idsMatriculaParamSchema,
+  listarAulasQuerySchema,
+  cancelarMatriculaSchema,
+} = require('../schemas');
+const ErroDeDominio = require('../errors/ErroDeDominio');
+const executarEmTransacao = require('../db/transacao');
+
 const router = express.Router();
 
-router.get('/', async (req, res) => {
-  const aulas = await aulasRepository.listar({
-    instrutor_id: req.query.instrutor_id,
-  });
+router.get(
+  '/',
+  validar({ query: listarAulasQuerySchema }),
+  async (req, res) => {
+    const aulas = await aulasRepository.listar({
+      instrutor_id: req.query.instrutor_id,
+    });
 
-  res.json(aulas);
-});
+    res.json(aulas);
+  },
+);
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', validar({ params: idParamSchema }), async (req, res) => {
   const aula = await aulasRepository.buscarPorId(req.params.id);
 
   if (!aula) {
@@ -30,6 +46,7 @@ router.post(
   '/',
   autenticar,
   autorizar('instrutor', 'admin'),
+  validar({ body: criarAulaSchema }),
   async (req, res) => {
     const {
       nome,
@@ -39,19 +56,6 @@ router.post(
       duracao_minutos,
       capacidade_maxima,
     } = req.body;
-
-    if (
-      !nome ||
-      !instrutor_id ||
-      !dia_semana ||
-      !hora_inicio ||
-      !duracao_minutos ||
-      !capacidade_maxima
-    ) {
-      return res.status(400).json({
-        erro: 'nome, instrutor_id, dia_semana, hora_inicio, duracao_minutos e capacidade_maxima são obrigatórios',
-      });
-    }
 
     if (
       req.usuario.papel === 'instrutor' &&
@@ -99,6 +103,7 @@ router.patch(
   '/:id',
   autenticar,
   autorizar('instrutor', 'admin'),
+  validar({ params: idParamSchema, body: atualizarAulaSchema }),
   async (req, res) => {
     const aulaExistente = await aulasRepository.buscarPorId(req.params.id);
 
@@ -152,6 +157,7 @@ router.delete(
   '/:id',
   autenticar,
   autorizar('instrutor', 'admin'),
+  validar({ params: idParamSchema }),
   async (req, res) => {
     const aula = await aulasRepository.buscarPorId(req.params.id);
 
@@ -177,72 +183,82 @@ router.post(
   '/:id/matriculas',
   autenticar,
   autorizar('aluno'),
-  async (req, res, next) => {
-    const aula = await aulasRepository.buscarPorId(req.params.id);
-
-    if (!aula) {
-      return res.status(404).json({ erro: 'Aula não encontrada' });
-    }
-
-    const totalConfirmadas = await matriculasRepository.contarConfirmadas(
-      aula.id,
-    );
-
-    if (totalConfirmadas >= aula.capacidade_maxima) {
-      return res.status(409).json({ erro: 'Aula sem vagas disponíveis' });
-    }
-
+  validar({ params: idParamSchema }),
+  async (req, res) => {
     try {
-      const matriculaCriada = await matriculasRepository.criar({
-        aluno_id: req.usuario.id,
-        aula_id: aula.id,
+      const matriculaCriada = await executarEmTransacao(async (client) => {
+        const aula = await aulasRepository.buscarPorIdBloqueando(
+          req.params.id,
+          client,
+        );
+
+        if (!aula) {
+          throw new ErroDeDominio('Aula não encontrada', 404);
+        }
+
+        const totalConfirmadas = await matriculasRepository.contarConfirmadas(
+          aula.id,
+          client,
+        );
+
+        if (totalConfirmadas >= aula.capacidade_maxima) {
+          throw new ErroDeDominio('Aula sem vagas disponíveis', 409);
+        }
+
+        return matriculasRepository.criar(
+          { aluno_id: req.usuario.id, aula_id: aula.id },
+          client,
+        );
       });
 
       res
         .status(201)
-        .location(`/aulas/${aula.id}/matriculas/${matriculaCriada.id}`)
+        .location(`/aulas/${req.params.id}/matriculas/${matriculaCriada.id}`)
         .json(matriculaCriada);
     } catch (err) {
       if (err.code === '23505') {
-        return res
-          .status(409)
-          .json({ erro: 'Aluno já matriculado nesta aula' });
+        throw new ErroDeDominio('Aluno já matriculado nesta aula', 409);
       }
-      next(err);
+      throw err;
     }
   },
 );
 
-router.patch('/:id/matriculas/:matriculaId', autenticar, async (req, res) => {
-  const { status } = req.body;
+router.patch(
+  '/:id/matriculas/:matriculaId',
+  autenticar,
+  validar({ params: idsMatriculaParamSchema, body: cancelarMatriculaSchema }),
+  async (req, res) => {
+    const matricula = await matriculasRepository.buscarPorIdEAula(
+      req.params.matriculaId,
+      req.params.id,
+    );
 
-  if (status !== 'cancelada') {
-    return res.status(400).json({ erro: "status precisa ser 'cancelada'" });
-  }
+    if (!matricula) {
+      return res.status(404).json({ erro: 'Matrícula não encontrada' });
+    }
 
-  const matricula = await matriculasRepository.buscarPorIdEAula(
-    req.params.matriculaId,
-    req.params.id,
-  );
+    if (
+      req.usuario.papel !== 'aluno' ||
+      matricula.aluno_id !== req.usuario.id
+    ) {
+      return res.status(403).json({
+        erro: 'Você não pode cancelar a matrícula de outro aluno',
+      });
+    }
 
-  if (!matricula) {
-    return res.status(404).json({ erro: 'Matrícula não encontrada' });
-  }
-
-  if (req.usuario.papel !== 'aluno' || matricula.aluno_id !== req.usuario.id) {
-    return res.status(403).json({
-      erro: 'Você não pode cancelar a matrícula de outro aluno',
-    });
-  }
-
-  const matriculaCancelada = await matriculasRepository.cancelar(matricula.id);
-  res.json(matriculaCancelada);
-});
+    const matriculaCancelada = await matriculasRepository.cancelar(
+      matricula.id,
+    );
+    res.json(matriculaCancelada);
+  },
+);
 
 router.get(
   '/:id/matriculas',
   autenticar,
   autorizar('instrutor', 'admin'),
+  validar({ params: idParamSchema }),
   async (req, res) => {
     const aula = await aulasRepository.buscarPorId(req.params.id);
 
