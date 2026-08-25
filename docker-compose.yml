@@ -4,10 +4,14 @@ services:
     restart: always
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: senha123
+      # Lido do .env (não versionado). Sem valor padrão de propósito:
+      # é melhor o compose falhar do que subir com uma senha conhecida.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
       POSTGRES_DB: estudo
     ports:
-      - '5432:5432'
+      # Só o localhost. Sem o prefixo, o Docker publica em 0.0.0.0
+      # e o banco fica alcançável por qualquer máquina da rede.
+      - '127.0.0.1:5432:5432'
     volumes:
       - pgdata:/var/lib/postgresql/data
 

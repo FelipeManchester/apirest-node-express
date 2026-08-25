@@ -14,7 +14,9 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: senha123
+          # Container efêmero do runner, destruído no fim do job e sem porta
+          # exposta para fora dele. Não é credencial de lugar nenhum.
+          POSTGRES_PASSWORD: postgres_ci
         ports:
           - 5432:5432
         options: >-
@@ -35,6 +37,17 @@ jobs:
 
       - name: Instalar dependências
         run: npm ci
+
+      - name: Preparar o .env.test
+        # O .env.test não é versionado (contém credencial). O CI monta o dele,
+        # com um JWT_SECRET novo a cada execução.
+        run: |
+          cat > .env.test <<EOF
+          DATABASE_URL=postgresql://postgres:postgres_ci@localhost:5432/estudo_test
+          JWT_SECRET=$(node -pe "require('crypto').randomBytes(32).toString('hex')")
+          CORS_ORIGINS=http://localhost:5173
+          NODE_ENV=test
+          EOF
 
       - name: Lint
         run: npm run lint
