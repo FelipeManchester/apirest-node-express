@@ -1,4 +1,5 @@
 const express = require('express');
+const { z } = require('zod');
 const instrutoresRepository = require('../repositories/instrutoresRepository');
 const autenticar = require('../middlewares/autenticar');
 const autorizar = require('../middlewares/autorizar');
@@ -10,15 +11,40 @@ const {
   criarInstrutorSchema,
   atualizarInstrutorSchema,
   idParamSchema,
+  paginacaoSchema,
 } = require('../schemas');
+
+const listarInstrutoresQuerySchema = paginacaoSchema([
+  'id',
+  'nome',
+  'especialidade',
+]).extend({
+  nome: z.string().trim().min(1).optional(),
+  especialidade: z.string().trim().min(1).optional(),
+});
 
 const router = express.Router();
 
 // LISTA TODOS OS INSTRUTORES
-router.get('/', async (req, res) => {
-  const instrutores = await instrutoresRepository.listar();
-  res.json(instrutores);
-});
+router.get(
+  '/',
+  validar({ query: listarInstrutoresQuerySchema }),
+  async (req, res) => {
+    const { pagina, limite } = req.query;
+
+    const { dados, total } = await instrutoresRepository.listar(req.query);
+
+    res.json({
+      dados,
+      paginacao: {
+        pagina,
+        limite,
+        total,
+        total_paginas: Math.ceil(total / limite),
+      },
+    });
+  },
+);
 
 // LISTA UM INSTRUTOR POR ID
 router.get('/:id', validar({ params: idParamSchema }), async (req, res) => {

@@ -5,6 +5,7 @@ const {
   atualizarInstrutorSchema,
 } = require('./instrutorSchema');
 const { criarAulaSchema, atualizarAulaSchema } = require('./aulasSchema');
+const { paginacaoSchema } = require('./paginacaoSchema');
 const {
   idParamSchema,
   idsMatriculaParamSchema,
@@ -17,6 +18,7 @@ const {
 z.config(z.locales.pt());
 
 module.exports = {
+  paginacaoSchema,
   criarAlunoSchema,
   criarInstrutorSchema,
   atualizarInstrutorSchema,

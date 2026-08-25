@@ -2,11 +2,49 @@ const pool = require('../db/pool');
 
 // LISTAR OS ALUNOS
 
-async function listar() {
-  const query =
-    'SELECT id, nome, email, data_nascimento, criado_em FROM alunos ORDER BY id';
-  const resultado = await pool.query(query);
-  return resultado.rows;
+const COLUNAS_ORDENAVEIS = {
+  id: 'id',
+  nome: 'nome',
+  criado_em: 'criado_em',
+};
+
+async function listar({
+  pagina = 1,
+  limite = 20,
+  ordenar_por = 'id',
+  ordem = 'asc',
+  nome,
+} = {}) {
+  const coluna = COLUNAS_ORDENAVEIS[ordenar_por] ?? 'id';
+  const direcao = ordem === 'desc' ? 'DESC' : 'ASC';
+
+  const valores = [];
+  let where = '';
+
+  if (nome) {
+    valores.push(nome);
+    where = `WHERE nome ILIKE '%' || $${valores.length} || '%'`;
+  }
+
+  valores.push(limite, (pagina - 1) * limite);
+
+  const query = /* sql */ `
+    SELECT id, nome, email, data_nascimento, criado_em,
+           COUNT(*) OVER() AS total
+    FROM alunos
+    ${where}
+    ORDER BY ${coluna} ${direcao}
+    LIMIT $${valores.length - 1} OFFSET $${valores.length}
+  `;
+
+  const resultado = await pool.query(query, valores);
+
+  const total = resultado.rows.length ? Number(resultado.rows[0].total) : 0;
+
+  return {
+    dados: resultado.rows.map(({ total: _total, ...aluno }) => aluno),
+    total,
+  };
 }
 
 // CRIAR OS ALUNOS

@@ -16,7 +16,13 @@ function validar(schemas) {
           })),
         });
       }
-      req[origem] = resultado.data;
+      // req.query é um getter no Express 5: atribuir direto não altera nada
+      // (e não lança erro). defineProperty funciona para as três origens.
+      Object.defineProperty(req, origem, {
+        value: resultado.data,
+        writable: true,
+        configurable: true,
+      });
     }
     next();
   };

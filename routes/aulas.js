@@ -24,11 +24,19 @@ router.get(
   '/',
   validar({ query: listarAulasQuerySchema }),
   async (req, res) => {
-    const aulas = await aulasRepository.listar({
-      instrutor_id: req.query.instrutor_id,
-    });
+    const { pagina, limite } = req.query;
 
-    res.json(aulas);
+    const { dados, total } = await aulasRepository.listar(req.query);
+
+    res.json({
+      dados,
+      paginacao: {
+        pagina,
+        limite,
+        total,
+        total_paginas: Math.ceil(total / limite),
+      },
+    });
   },
 );
 

@@ -1,15 +1,54 @@
 const pool = require('../db/pool');
 
-async function listar() {
-  const query = /* sql */ `
-    SELECT id, nome, especialidade, papel
-    FROM instrutores
-    WHERE ativo = true
-    ORDER BY id
-  `;
-  const resultado = await pool.query(query);
+const COLUNAS_ORDENAVEIS = {
+  id: 'id',
+  nome: 'nome',
+  especialidade: 'especialidade',
+};
 
-  return resultado.rows;
+async function listar({
+  pagina = 1,
+  limite = 20,
+  ordenar_por = 'id',
+  ordem = 'asc',
+  nome,
+  especialidade,
+} = {}) {
+  const coluna = COLUNAS_ORDENAVEIS[ordenar_por] ?? 'id';
+  const direcao = ordem === 'desc' ? 'DESC' : 'ASC';
+
+  const condicoes = ['ativo = true'];
+  const valores = [];
+
+  if (nome) {
+    valores.push(nome);
+    condicoes.push(`nome ILIKE '%' || $${valores.length} || '%'`);
+  }
+
+  if (especialidade) {
+    valores.push(especialidade);
+    condicoes.push(`especialidade ILIKE '%' || $${valores.length} || '%'`);
+  }
+
+  valores.push(limite, (pagina - 1) * limite);
+
+  const query = /* sql */ `
+    SELECT id, nome, especialidade, papel,
+           COUNT(*) OVER() AS total
+    FROM instrutores
+    WHERE ${condicoes.join(' AND ')}
+    ORDER BY ${coluna} ${direcao}
+    LIMIT $${valores.length - 1} OFFSET $${valores.length}
+  `;
+
+  const resultado = await pool.query(query, valores);
+
+  const total = resultado.rows.length ? Number(resultado.rows[0].total) : 0;
+
+  return {
+    dados: resultado.rows.map(({ total: _total, ...instrutor }) => instrutor),
+    total,
+  };
 }
 
 async function buscarPorId(id) {

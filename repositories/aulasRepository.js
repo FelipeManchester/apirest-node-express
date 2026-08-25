@@ -2,18 +2,56 @@ const pool = require('../db/pool');
 
 // LISTAR AULAS DE UM INSTRUTOR OU TODAS
 
-async function listar({ instrutor_id } = {}) {
-  if (instrutor_id) {
-    const query = 'SELECT * FROM aulas WHERE instrutor_id = $1 ORDER BY id';
+const COLUNAS_ORDENAVEIS = {
+  id: 'id',
+  nome: 'nome',
+  hora_inicio: 'hora_inicio',
+};
 
-    const resultado = await pool.query(query, [instrutor_id]);
-    return resultado.rows;
+async function listar({
+  pagina = 1,
+  limite = 20,
+  ordenar_por = 'id',
+  ordem = 'asc',
+  instrutor_id,
+  dia_semana,
+} = {}) {
+  const coluna = COLUNAS_ORDENAVEIS[ordenar_por] ?? 'id';
+  const direcao = ordem === 'desc' ? 'DESC' : 'ASC';
+
+  const condicoes = [];
+  const valores = [];
+
+  if (instrutor_id) {
+    valores.push(instrutor_id);
+    condicoes.push(`instrutor_id = $${valores.length}`);
   }
 
-  const query = 'SELECT * FROM aulas ORDER BY id';
-  const resultado = await pool.query(query);
+  if (dia_semana) {
+    valores.push(dia_semana);
+    condicoes.push(`dia_semana = $${valores.length}`);
+  }
 
-  return resultado.rows;
+  const where = condicoes.length ? `WHERE ${condicoes.join(' AND ')}` : '';
+
+  valores.push(limite, (pagina - 1) * limite);
+
+  const query = /* sql */ `
+    SELECT *, COUNT(*) OVER() AS total
+    FROM aulas
+    ${where}
+    ORDER BY ${coluna} ${direcao}
+    LIMIT $${valores.length - 1} OFFSET $${valores.length}
+  `;
+
+  const resultado = await pool.query(query, valores);
+
+  const total = resultado.rows.length ? Number(resultado.rows[0].total) : 0;
+
+  return {
+    dados: resultado.rows.map(({ total: _total, ...aula }) => aula),
+    total,
+  };
 }
 
 async function buscarPorId(id) {
