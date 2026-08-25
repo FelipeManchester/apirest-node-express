@@ -52,7 +52,8 @@ async function listar({
 }
 
 async function buscarPorId(id) {
-  const query = 'SELECT * FROM instrutores WHERE id = $1';
+  const query =
+    'SELECT id, nome, especialidade, email, papel, ativo FROM instrutores WHERE id = $1';
   const resultado = await pool.query(query, [id]);
 
   return resultado.rows[0];

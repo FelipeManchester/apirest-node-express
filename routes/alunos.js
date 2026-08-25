@@ -1,5 +1,4 @@
 const express = require('express');
-const { z } = require('zod');
 
 const { hashSenha } = require('../services/senhaService');
 
@@ -9,19 +8,12 @@ const autenticar = require('../middlewares/autenticar');
 const autorizar = require('../middlewares/autorizar');
 
 const validar = require('../middlewares/validar');
+const ErroDeDominio = require('../errors/ErroDeDominio');
 const {
   criarAlunoSchema,
   idParamSchema,
-  paginacaoSchema,
+  listarAlunosQuerySchema,
 } = require('../schemas');
-
-const listarAlunosQuerySchema = paginacaoSchema([
-  'id',
-  'nome',
-  'criado_em',
-]).extend({
-  nome: z.string().trim().min(1).optional(),
-});
 
 const router = express.Router();
 
@@ -52,14 +44,21 @@ router.post('/', validar({ body: criarAlunoSchema }), async (req, res) => {
 
   const senha_hash = await hashSenha(senha);
 
-  const alunoCriado = await alunosRepository.criar({
-    nome,
-    email,
-    data_nascimento,
-    senha_hash,
-  });
-  const { senha_hash: _senhaHash, ...alunoSemSenha } = alunoCriado;
-  res.status(201).location(`/alunos/${alunoCriado.id}`).json(alunoSemSenha);
+  try {
+    const alunoCriado = await alunosRepository.criar({
+      nome,
+      email,
+      data_nascimento,
+      senha_hash,
+    });
+    const { senha_hash: _senhaHash, ...alunoSemSenha } = alunoCriado;
+    res.status(201).location(`/alunos/${alunoCriado.id}`).json(alunoSemSenha);
+  } catch (err) {
+    if (err.code === '23505') {
+      throw new ErroDeDominio('Já existe um aluno com esse email', 409);
+    }
+    throw err;
+  }
 });
 
 router.get(

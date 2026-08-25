@@ -64,7 +64,8 @@ async function criar({ nome, email, data_nascimento, senha_hash }) {
 // BUSCAR ALUNO POR ID
 
 async function buscarPorId(id) {
-  const query = 'SELECT * FROM alunos WHERE id = $1';
+  const query =
+    'SELECT id, nome, email, data_nascimento, criado_em FROM alunos WHERE id = $1';
 
   const resultado = await pool.query(query, [id]);
 

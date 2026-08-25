@@ -1,5 +1,4 @@
 const express = require('express');
-const { z } = require('zod');
 const instrutoresRepository = require('../repositories/instrutoresRepository');
 const autenticar = require('../middlewares/autenticar');
 const autorizar = require('../middlewares/autorizar');
@@ -11,17 +10,8 @@ const {
   criarInstrutorSchema,
   atualizarInstrutorSchema,
   idParamSchema,
-  paginacaoSchema,
+  listarInstrutoresQuerySchema,
 } = require('../schemas');
-
-const listarInstrutoresQuerySchema = paginacaoSchema([
-  'id',
-  'nome',
-  'especialidade',
-]).extend({
-  nome: z.string().trim().min(1).optional(),
-  especialidade: z.string().trim().min(1).optional(),
-});
 
 const router = express.Router();
 
@@ -54,7 +44,10 @@ router.get('/:id', validar({ params: idParamSchema }), async (req, res) => {
     return res.status(404).json({ erro: 'Instrutor não encontrado' });
   }
 
-  res.json(instrutor);
+  // Rota pública: email, papel e ativo são de uso interno e não saem daqui.
+  const { id, nome, especialidade } = instrutor;
+
+  res.json({ id, nome, especialidade });
 });
 
 // CRIAR UM INSTRUTOR

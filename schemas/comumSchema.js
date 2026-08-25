@@ -20,6 +20,23 @@ const listarAulasQuerySchema = paginacaoSchema([
   dia_semana: z.enum(DIAS).optional(),
 });
 
+const listarAlunosQuerySchema = paginacaoSchema([
+  'id',
+  'nome',
+  'criado_em',
+]).extend({
+  nome: z.string().trim().min(1).optional(),
+});
+
+const listarInstrutoresQuerySchema = paginacaoSchema([
+  'id',
+  'nome',
+  'especialidade',
+]).extend({
+  nome: z.string().trim().min(1).optional(),
+  especialidade: z.string().trim().min(1).optional(),
+});
+
 const cancelarMatriculaSchema = z.strictObject({
   status: z.literal('cancelada'),
 });
@@ -28,5 +45,7 @@ module.exports = {
   idParamSchema,
   idsMatriculaParamSchema,
   listarAulasQuerySchema,
+  listarAlunosQuerySchema,
+  listarInstrutoresQuerySchema,
   cancelarMatriculaSchema,
 };

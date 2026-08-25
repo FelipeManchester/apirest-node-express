@@ -10,6 +10,8 @@ const {
   idParamSchema,
   idsMatriculaParamSchema,
   listarAulasQuerySchema,
+  listarAlunosQuerySchema,
+  listarInstrutoresQuerySchema,
   cancelarMatriculaSchema,
 } = require('./comumSchema');
 
@@ -27,5 +29,7 @@ module.exports = {
   idParamSchema,
   idsMatriculaParamSchema,
   listarAulasQuerySchema,
+  listarAlunosQuerySchema,
+  listarInstrutoresQuerySchema,
   cancelarMatriculaSchema,
 };
