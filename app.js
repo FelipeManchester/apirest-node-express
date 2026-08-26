@@ -12,6 +12,10 @@ const cookieParser = require('cookie-parser');
 const ErroDeDominio = require('./errors/ErroDeDominio');
 const helmet = require('helmet');
 const corsConfigurado = require('./middlewares/cors');
+
+const registrarRequisicoes = require('./middlewares/registrarRequisicoes');
+const { router: healthRouter } = require('./routes/health');
+
 const {
   limitadorLogin,
   limitadorGlobal,
@@ -19,8 +23,12 @@ const {
 
 const app = express();
 
+app.use(registrarRequisicoes);
+
 app.use(helmet());
 app.use(corsConfigurado);
+
+app.use('/health', healthRouter);
 app.use(limitadorGlobal);
 
 app.use(express.json({ limit: '10kb' }));
@@ -52,7 +60,7 @@ app.use((err, req, res, _next) => {
     return res.status(400).json({ erro: 'JSON inválido' });
   }
 
-  console.error(err);
+  req.log.error({ err }, 'erro não tratado');
   res.status(500).json({ erro: 'Erro interno no servidor' });
 });
 
