@@ -34,7 +34,7 @@ const registrarRequisicoes = pinoHttp({
       id: req.id,
       metodo: req.method,
       url: req.originalUrl || req.url,
-      ip: req.remoteAddress,
+      ip: (req.raw && req.raw.ip) || req.remoteAddress,
     }),
     res: (res) => ({ status: res.statusCode }),
   },

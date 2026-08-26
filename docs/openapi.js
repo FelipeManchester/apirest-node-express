@@ -12,7 +12,12 @@ module.exports = {
     version: '1.0.0',
     description: 'API de agendamento de aulas de uma academia.',
   },
-  servers: [{ url: 'http://localhost:3000', description: 'Desenvolvimento' }],
+  servers: [
+    {
+      url: process.env.PUBLIC_URL || 'http://localhost:3000',
+      description: process.env.PUBLIC_URL ? 'Produção' : 'Desenvolvimento',
+    },
+  ],
   tags: [
     { name: 'Autenticação' },
     { name: 'Alunos' },

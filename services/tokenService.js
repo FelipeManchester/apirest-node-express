@@ -19,10 +19,14 @@ function calcularExpiracao() {
 const COOKIE_REFRESH = 'refresh_token';
 
 function opcoesCookieRefresh() {
+  const emProducao = process.env.NODE_ENV === 'production';
+
+  const entreSites = process.env.COOKIE_CROSS_SITE === 'true';
+
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    secure: emProducao || entreSites,
+    sameSite: entreSites ? 'none' : 'lax',
     path: '/auth',
     maxAge: DIAS_DE_VALIDADE * 24 * 60 * 60 * 1000,
   };
